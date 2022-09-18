@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActiveUser;
+use App\Models\AnonymousName;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +15,26 @@ class AuthController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api', ['except' => ['login','register']]);
+    }
+
+    // public function getName()
+    // {
+    //     if (count(ActiveUser::where('user_id', Auth::id())->get()) > 0) {
+    //         return ActiveUser::select("name")->where("user_id", Auth::id())->get()[0]->name;
+    //     }
+
+    //     $takenName = ActiveUser::all("name");
+    //     $allName = AnonymousName::all("name")->diffAssoc($takenName);
+            
+    //     return implode("", $allName->toArray()[mt_rand(0, count($allName) - 1)]);
+    // }
+
+    public function getName()
+    {
+        $takenName = ActiveUser::all("name");
+        $allName = AnonymousName::all("name")->diffAssoc($takenName);
+
+        return implode("", $allName->toArray()[mt_rand(0, count($allName) - 1)]);
     }
 
     public function login(Request $request)
@@ -30,16 +52,29 @@ class AuthController extends Controller
                 'message' => 'Unauthorized',
             ], 401);
         }
+        
+        $anonymousName = AuthController::getName();
+        if (count(ActiveUser::where('user_id', Auth::id())->get()) < 1) {
+            ActiveUser::create([
+                'user_id' => Auth::id(),
+                'name' => $anonymousName
+            ]);
+        } else {
+            ActiveUser::where('user_id', Auth::id())->update([
+                'name' => $anonymousName
+            ]);
+        }
 
         $user = Auth::user();
         return response()->json([
-                'status' => 'success',
-                'user' => $user,
-                'authorisation' => [
-                    'token' => $token,
-                    'type' => 'bearer',
-                ]
-            ]);
+            'status' => 'success',
+            'user' => $user,
+            'anonymousName' => $anonymousName,
+            'authorisation' => [
+                'token' => $token,
+                'type' => 'bearer',
+            ]
+        ]);
 
     }
 
@@ -57,10 +92,18 @@ class AuthController extends Controller
         ]);
 
         $token = Auth::login($user);
+
+        $anonymousName = AuthController::getName();
+        ActiveUser::create([
+            'user_id' => Auth::id(),
+            'name' => $anonymousName
+        ]);
+
         return response()->json([
             'status' => 'success',
             'message' => 'User created successfully',
             'user' => $user,
+            'anonymousName' => $anonymousName,
             'authorisation' => [
                 'token' => $token,
                 'type' => 'bearer',
@@ -70,6 +113,7 @@ class AuthController extends Controller
 
     public function logout()
     {
+        ActiveUser::where('user_id', Auth::id())->delete();
         Auth::logout();
         return response()->json([
             'status' => 'success',
@@ -79,9 +123,15 @@ class AuthController extends Controller
 
     public function refresh()
     {
+        $anonymousName = AuthController::getName();
+        ActiveUser::where('user_id', Auth::id())->update([
+            'name' => $anonymousName
+        ]);
+        
         return response()->json([
             'status' => 'success',
             'user' => Auth::user(),
+            'anonymousName' => $anonymousName,
             'authorisation' => [
                 'token' => Auth::refresh(),
                 'type' => 'bearer',
