@@ -17,18 +17,6 @@ class AuthController extends Controller
         $this->middleware('auth:api', ['except' => ['login','register']]);
     }
 
-    // public function getName()
-    // {
-    //     if (count(ActiveUser::where('user_id', Auth::id())->get()) > 0) {
-    //         return ActiveUser::select("name")->where("user_id", Auth::id())->get()[0]->name;
-    //     }
-
-    //     $takenName = ActiveUser::all("name");
-    //     $allName = AnonymousName::all("name")->diffAssoc($takenName);
-            
-    //     return implode("", $allName->toArray()[mt_rand(0, count($allName) - 1)]);
-    // }
-
     public function getName()
     {
         $takenName = ActiveUser::all("name");
