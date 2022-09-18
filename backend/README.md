@@ -17,5 +17,6 @@ composer install &&
 php artisan key:generate &&
 php artisan jwt:secret &&
 php artisan migrate:fresh &&
+php artisan db:seed &&
 php artisan serve
 ```
